@@ -7,65 +7,71 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --success: #22c55e;
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
             --escalated: #dc2626;
-            --bg: #f8fafc;
+            --bg: #f0f4ff;
             --card-bg: #ffffff;
             --text: #1e293b;
             --text-muted: #64748b;
-        }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg: #0f172a;
-                --card-bg: #1e293b;
-                --text: #f1f5f9;
-                --text-muted: #94a3b8;
-            }
         }
         *, *::before, *::after { box-sizing: border-box; }
         body {
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg);
+            background: linear-gradient(135deg, #e0e7ff 0%, #f0f4ff 100%);
             color: var(--text);
             line-height: 1.6;
+            transition: background 0.3s ease;
         }
-        .container { max-width: 1400px; margin: 0 auto; padding: 1rem; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 1rem; }
         header {
             text-align: center;
-            padding: 1.5rem 0;
-            border-bottom: 1px solid #e2e8f0;
+            padding: 2rem 0;
             margin-bottom: 1.5rem;
         }
-        header h1 { font-size: 1.75rem; margin: 0 0 0.5rem; color: var(--primary); }
+        header h1 {
+            font-size: 2rem;
+            margin: 0 0 0.5rem;
+            background: linear-gradient(135deg, var(--primary), #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        header p { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem; }
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
         }
         .stat-card {
-            background: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: #fff;
+            padding: 1.75rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
             text-align: center;
+            transition: all 0.3s ease;
+            border-top: 3px solid var(--primary);
         }
-        .stat-card h3 { font-size: 0.875rem; color: var(--text-muted); margin: 0 0 0.5rem; }
-        .stat-card .value { font-size: 2rem; font-weight: 700; margin: 0; }
-        .stat-card .unit { font-size: 0.875rem; color: var(--text-muted); }
+        .stat-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.25);
+        }
+        .stat-card h3 { font-size: 0.813rem; color: var(--text-muted); margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card .value { font-size: 2.25rem; font-weight: 800; margin: 0; color: var(--primary); }
+        .stat-card .unit { font-size: 0.813rem; color: var(--text-muted); margin-top: 0.25rem; display: block; }
         .chart-card {
-            background: var(--card-bg);
+            background: #fff;
             padding: 1.5rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.12);
+            margin-bottom: 2rem;
         }
-        .chart-card h3 { font-size: 1rem; margin: 0 0 1rem; }
+        .chart-card h3 { font-size: 1rem; margin: 0 0 1rem; color: var(--text); font-weight: 700; }
         .chart-wrapper {
             position: relative;
             width: 100%;
@@ -73,8 +79,8 @@
         }
         .table-card {
             background: #ffffff;
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.12);
             overflow: hidden;
         }
         table {
@@ -120,34 +126,41 @@
 }
         .btn-primary:hover { background: var(--primary-dark); }
         .badge-select {
-            border: 1px solid #cbd5e1;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            background: #fff;
+            border: 1px solid #c9d1d9;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
             font-size: 0.75rem;
-            color: #1f2937;
+            font-weight: 600;
+            white-space: nowrap;
         }
         .table-card .btn { color: #1f2937; }
         .modal {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
             align-items: center;
             justify-content: center;
             z-index: 100;
         }
         .modal.active { display: flex; }
         .modal-content {
-            background: var(--card-bg);
-            border-radius: 0.75rem;
+            background: #fff;
+            border-radius: 1rem;
             max-width: 600px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
             padding: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            animation: modalFade 0.3s ease;
         }
-        .modal-content h3 { margin: 0 0 1rem; font-size: 1.25rem; }
+        @keyframes modalFade {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-content h3 { margin: 0 0 1rem; font-size: 1.25rem; color: var(--primary); }
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -187,7 +200,16 @@
 <body>
     <div class="container">
         <header>
-            <h1>🛍️ Merchant Onboarding & Activation Tracker</h1>
+            <div class="hero">
+                <h1>🛍️ Merchant Onboarding & Activation Tracker</h1>
+                <p>Track every merchant from sale to go-live. Built for onboarding specialists who love data-driven activation.</p>
+                <div style="margin-top: 1rem; font-size: 1.5rem;">
+                    <span title="Activation Rate">📊</span>
+                    <span title="Merchants">🛍️</span>
+                    <span title="Escalations">⚡</span>
+                    <span title="Go-Live">🚀</span>
+                </div>
+            </div>
         </header>
 
         <div class="stats-grid">
@@ -217,9 +239,12 @@
         </div>
 
         <div class="table-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 1rem;">
                 <h2 style="margin: 0; font-size: 1.25rem;">Merchant List</h2>
-                <button class="btn btn-primary" onclick="openModal('add')">+ Add Merchant</button>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <input type="search" id="merchant-search" placeholder="Search merchants..." style="padding: 0.5rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; font-size: 0.875rem; width: 250px; transition: border-color 0.2s, box-shadow 0.2s;">
+                    <button class="btn btn-primary" onclick="openModal('add')">+ Add Merchant</button>
+                </div>
             </div>
             <table>
                 <thead>
@@ -375,18 +400,32 @@
         }
 
         function renderTable() {
+            const filter = (document.getElementById('merchant-search')?.value || '').toLowerCase();
             const tbody = document.getElementById('merchant-tbody');
             tbody.innerHTML = '';
-            merchants.forEach(m => {
+            const stageColors = {
+                'Business Details': { bg: '#e0e7ff', text: '#4338ca', border: '#818cf8' },
+                'Category/Location': { bg: '#fef3c7', text: '#92400e', border: '#fbbf24' },
+                'Ad Objective': { bg: '#e0e7ff', text: '#4338ca', border: '#818cf8' },
+                'Creative Approval': { bg: '#fce7f3', text: '#9d174d', border: '#f472b6' },
+                'Campaign Live': { bg: '#dcfce7', text: '#166534', border: '#4ade80' }
+            };
+            merchants.filter(m => {
+                if (!filter) return true;
+                const allText = `${m.id} ${m.name} ${m.stage} ${m.approval} ${m.goLive || ''}`.toLowerCase();
+                return allText.includes(filter);
+            }).forEach(m => {
                 const t2a = calcDays(m.closure, m.goLive);
                 const status = getStatus(m.closure, m.goLive, m.escalation);
+                const sc = stageColors[m.stage] || stageColors['Business Details'];
                 const row = document.createElement('tr');
+                row.style.transition = 'background 0.2s, transform 0.2s';
                 row.innerHTML = `
-                    <td>${m.id}</td>
+                    <td><strong>${m.id}</strong></td>
                     <td>${m.name}</td>
-                    <td><span class="badge-select">${m.stage}</span></td>
+                    <td><span class="badge-select" style="background: ${sc.bg}; color: ${sc.text}; border-color: ${sc.border};">${m.stage}</span></td>
                     <td>${formatDate(m.closure)}</td>
-                    <td><strong>${t2a}</strong></td>
+                    <td><strong style="color: ${typeof t2a === 'number' ? (t2a <= 7 ? 'var(--success)' : 'var(--warning)') : 'inherit'}">${t2a}</strong></td>
                     <td><span class="badge ${getStatusBadgeClass(status)} status-badge">${getStatusLabel(status)}</span></td>
                     <td><button class="btn" onclick="openModal('edit', '${m.id}')">Edit</button></td>
                 `;
@@ -409,7 +448,8 @@
                         label: 'Merchants',
                         data: stages.map(s => counts[s]),
                         backgroundColor: varPrimary(),
-                        borderRadius: 4
+                        borderRadius: 6,
+                        hoverBackgroundColor: varPrimaryDark()
                     }]
                 },
                 options: {
@@ -417,26 +457,27 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: {
-                            ticks: { color: '#cbd5e1', font: { size: 11 } },
-                            grid: { color: 'rgba(255,255,255,0.1)' }
+                            ticks: { color: '#64748b', font: { size: 11 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
                         },
                         y: {
-                            ticks: { color: '#cbd5e1', font: { size: 11 } },
-                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: '#64748b', font: { size: 11 } },
+                            grid: { color: 'rgba(0,0,0,0.06)' },
                             beginAtZero: true
                         }
                     },
                     plugins: {
                         legend: {
-                            display: false,
-                            labels: { color: '#e2e8f0' }
+                            display: false
                         },
                         tooltip: {
-                            backgroundColor: '#1f2937',
-                            titleColor: '#f1f5f9',
-                            bodyColor: '#e2e8f0',
-                            borderColor: '#374151',
-                            borderWidth: 1
+                            backgroundColor: '#1e293b',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#cbd5e1',
+                            borderColor: '#6366f1',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 12
                         }
                     }
                 }
@@ -444,7 +485,10 @@
         }
 
         function varPrimary() {
-            return getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#2563eb';
+            return getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#6366f1';
+        }
+        function varPrimaryDark() {
+            return getComputedStyle(document.documentElement).getPropertyValue('--primary-dark').trim() || '#4f46e5';
         }
 
         function updateStats() {
@@ -503,6 +547,10 @@
 
         document.getElementById('m-escalation').addEventListener('change', function() {
             document.getElementById('escalation-note-group').style.display = this.value === 'yes' ? 'block' : 'none';
+        });
+
+        document.getElementById('merchant-search')?.addEventListener('input', function() {
+            renderTable();
         });
 
         document.getElementById('merchant-form').addEventListener('submit', function(e) {
