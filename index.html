@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merchant Onboarding Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --escalated: #dc2626;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card-bg: #1e293b;
+                --text: #f1f5f9;
+                --text-muted: #94a3b8;
+            }
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 1rem; }
+        header {
+            text-align: center;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+        }
+        header h1 { font-size: 1.75rem; margin: 0 0 0.5rem; color: var(--primary); }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-card h3 { font-size: 0.875rem; color: var(--text-muted); margin: 0 0 0.5rem; }
+        .stat-card .value { font-size: 2rem; font-weight: 700; margin: 0; }
+        .stat-card .unit { font-size: 0.875rem; color: var(--text-muted); }
+        .chart-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        .chart-card h3 { font-size: 1rem; margin: 0 0 1rem; }
+        .table-card {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        th { background: #f1f5f9; font-weight: 600; color: var(--text); font-size: 0.875rem; }
+        td { font-size: 0.875rem; }
+        tr:hover { background: #f8fafc; }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-on-track { background: #dcfce7; color: #166534; }
+        .badge-risk { background: #fef3c7; color: #92400e; }
+        .badge-escalated { background: #fee2e2; color: #991b1b; }
+        .status-badge { font-weight: 500; }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: var(--text);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #f1f5f9; }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+}
+        .btn-primary:hover { background: var(--primary-dark); }
+        .badge-select {
+            border: 1px solid #cbd5e1;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            background: #fff;
+            font-size: 0.75rem;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+        .modal-content h3 { margin: 0 0 1rem; font-size: 1.25rem; }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        .form-group { flex-direction: column; }
+        .form-group label { font-size: 0.875rem; margin-bottom: 0.25rem; }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 0.5rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .modal-actions { margin-top: 1.5rem; text-align: right; }
+        .toast {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: #333;
+            color: #fff;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        @media (max-width: 768px) {
+            .stat-card .value { font-size: 1.75rem; }
+            th, td { padding: 0.5rem 0.75rem; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛍️ Merchant Onboarding & Activation Tracker</h1>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Activation Rate</h3>
+                <p class="value" id="activation-rate">0%</p>
+            </div>
+            <div class="stat-card">
+                <h3>Avg Time-to-Activation</h3>
+                <p class="value" id="avg-time">0 days</p>
+            </div>
+            <div class="stat-card">
+                <h3>Drop-off Rate</h3>
+                <p class="value" id="dropoff-rate">0%</p>
+            </div>
+            <div class="stat-card">
+                <h3>Escalation Count</h3>
+                <p class="value" id="escalation-count">0</p>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Merchants by Setup Stage</h3>
+            <canvas id="stage-chart" height="200"></canvas>
+        </div>
+
+        <div class="table-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #e2e8f0;">
+                <h2 style="margin: 0; font-size: 1.25rem;">Merchant List</h2>
+                <button class="btn btn-primary" onclick="openModal('add')">+ Add Merchant</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Stage</th>
+                        <th>Sales Closure</th>
+                        <th>T2A (days)</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="merchant-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Add Merchant</h3>
+            <form id="merchant-form">
+                <input type="hidden" id="merchant-id">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Merchant ID</label>
+                        <input type="text" id="m-id" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="m-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Sales Closure Date</label>
+                        <input type="date" id="m-closure" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Setup Stage</label>
+                        <select id="m-stage" required>
+                            <option value="Business Details">Business Details</option>
+                            <option value="Category/Location">Category/Location</option>
+                            <option value="Ad Objective">Ad Objective</option>
+                            <option value="Creative Approval">Creative Approval</option>
+                            <option value="Campaign Live">Campaign Live</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Ad Approval Status</label>
+                        <select id="m-approval" required>
+                            <option value="Pending">Pending</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Campaign Go-Live Date</label>
+                        <input type="date" id="m-golive">
+                    </div>
+                    <div class="form-group" style="flex: 1; display: flex; flex-direction: column-reverse;">
+                        <label>Escalation Flag</label>
+                        <select id="m-escalation">
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="escalation-note-group" style="display: none; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Escalation Note</label>
+                        <textarea id="m-escalation-note" placeholder="Reason for escalation..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const STORAGE_KEY = 'merchants';
+        const stages = ['Business Details', 'Category/Location', 'Ad Objective', 'Creative Approval', 'Campaign Live'];
+        let merchants = [];
+        let chart;
+
+        function formatDate(d) {
+            if (!d) return '-';
+            const date = new Date(d);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function calcDays(start, end) {
+            if (!start || !end) return '-';
+            const s = new Date(start);
+            const e = new Date(end);
+            const diff = Math.round((e - s) / (1000 * 60 * 60 * 24));
+            return diff >= 0 ? diff : '-';
+        }
+
+        function getStatus(closure, goLive, escalated) {
+            if (escalated === 'yes') return 'escalated';
+            if (!closure || !goLive) return 'at-risk';
+            return 'on-track';
+        }
+
+        function getStatusLabel(s) {
+            if (s === 'escalated') return 'Escalated';
+            if (s === 'at-risk') return 'At Risk';
+            return 'On Track';
+        }
+
+        function getStatusBadgeClass(s) {
+            if (s === 'escalated') return 'badge-escalated';
+            if (s === 'at-risk') return 'badge-risk';
+            return 'badge-on-track';
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(merchants));
+        }
+
+        function loadSeedData() {
+            const seed = [
+                { id: 'MCH-001', name: 'Sharma Kirana Store', closure: '2026-09-01', stage: 'Campaign Live', approval: 'Approved', goLive: '2026-09-10', escalation: 'no', note: '' },
+                { id: 'MCH-002', name: 'Rose Beauty Salon', closure: '2026-09-05', stage: 'Creative Approval', approval: 'Pending', goLive: '', escalation: 'no', note: '' },
+                { id: 'MCH-003', name: 'FitZone Gym', closure: '2026-09-08', stage: 'Ad Objective', approval: 'Approved', goLive: '', escalation: 'yes', note: 'Merchant wants custom landing page' },
+                { id: 'MCH-004', name: 'SmartKids Tuition', closure: '2026-09-02', stage: 'Campaign Live', approval: 'Approved', goLive: '2026-09-15', escalation: 'no', note: '' },
+                { id: 'MCH-005', name: 'Raj Indian Restaurant', closure: '2026-09-10', stage: 'Business Details', approval: 'Pending', goLive: '', escalation: 'no', note: '' },
+                { id: 'MCH-006', name: 'FreshBite Café', closure: '2026-09-03', stage: 'Campaign Live', approval: 'Approved', goLive: '2026-09-12', escalation: 'no', note: '' },
+                { id: 'MCH-007', name: 'TechRepair Hub', closure: '2026-09-12', stage: 'Category/Location', approval: 'Pending', goLive: '', escalation: 'yes', note: 'Ad rejected for excessive text in image' },
+                { id: 'MCH-008', name: 'Priya Boutique', closure: '2026-09-07', stage: 'Campaign Live', approval: 'Approved', goLive: '2026-09-14', escalation: 'no', note: '' },
+                { id: 'MCH-009', name: 'GreenGrocer Farm', closure: '2026-09-09', stage: 'Business Details', approval: 'Pending', goLive: '', escalation: 'no', note: '' },
+                { id: 'MCH-010', name: 'Alpha Sports Store', closure: '2026-09-04', stage: 'Creative Approval', approval: 'Approved', goLive: '', escalation: 'no', note: '' }
+            ];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+            merchants = seed;
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                merchants = JSON.parse(saved);
+            } else {
+                loadSeedData();
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('merchant-tbody');
+            tbody.innerHTML = '';
+            merchants.forEach(m => {
+                const t2a = calcDays(m.closure, m.goLive);
+                const status = getStatus(m.closure, m.goLive, m.escalation);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${m.id}</td>
+                    <td>${m.name}</td>
+                    <td><span class="badge-select">${m.stage}</span></td>
+                    <td>${formatDate(m.closure)}</td>
+                    <td><strong>${t2a}</strong></td>
+                    <td><span class="badge ${getStatusBadgeClass(status)} status-badge">${getStatusLabel(status)}</span></td>
+                    <td><button class="btn" onclick="openModal('edit', '${m.id}')">Edit</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderChart() {
+            const counts = {};
+            stages.forEach(s => counts[s] = 0);
+            merchants.forEach(m => { if (counts[m.stage] !== undefined) counts[m.stage]++; });
+
+            const ctx = document.getElementById('stage-chart').getContext('2d');
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: stages,
+                    datasets: [{
+                        label: 'Merchants',
+                        data: stages.map(s => counts[s]),
+                        backgroundColor: varPrimary(),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function varPrimary() {
+            return getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#2563eb';
+        }
+
+        function updateStats() {
+            const activated = merchants.filter(m => m.stage === 'Campaign Live' && m.goLive).length;
+            const total = merchants.length;
+            const rate = total > 0 ? ((activated / total) * 100).toFixed(1) : 0;
+
+            const t2aDays = merchants.filter(m => m.goLive).map(m => calcDays(m.closure, m.goLive)).filter(d => d !== '-');
+            const avgT2A = t2aDays.length > 0 ? (t2aDays.reduce((a, b) => a + b, 0) / t2aDays.length).toFixed(1) + ' days' : '0 days';
+
+            const pending = merchants.filter(m => m.stage !== 'Campaign Live').length;
+            const dropoff = total > 0 ? ((pending / total) * 100).toFixed(1) : 0;
+
+            const escalations = merchants.filter(m => m.escalation === 'yes').length;
+
+            document.getElementById('activation-rate').textContent = rate + '%';
+            document.getElementById('avg-time').textContent = avgT2A;
+            document.getElementById('dropoff-rate').textContent = dropoff + '%';
+            document.getElementById('escalation-count').textContent = escalations;
+        }
+
+        function openModal(mode, id = null) {
+            const modal = document.getElementById('modal');
+            const form = document.getElementById('merchant-form');
+            const title = document.getElementById('modal-title');
+            if (mode === 'add') {
+                title.textContent = 'Add Merchant';
+                form.reset();
+                document.getElementById('merchant-id').value = '';
+                document.getElementById('m-closure').value = '';
+                document.getElementById('m-golive').value = '';
+                document.getElementById('escalation-note-group').style.display = 'none';
+            } else {
+                title.textContent = 'Edit Merchant';
+                const m = merchants.find(x => x.id === id);
+                if (m) {
+                    document.getElementById('merchant-id').value = m.id;
+                    document.getElementById('m-id').value = m.id;
+                    document.getElementById('m-name').value = m.name;
+                    document.getElementById('m-closure').value = m.closure;
+                    document.getElementById('m-stage').value = m.stage;
+                    document.getElementById('m-approval').value = m.approval;
+                    document.getElementById('m-golive').value = m.goLive;
+                    document.getElementById('m-escalation').value = m.escalation;
+                    document.getElementById('m-escalation-note').value = m.note || '';
+                    document.getElementById('escalation-note-group').style.display = m.escalation === 'yes' ? 'block' : 'none';
+                }
+            }
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            document.getElementById('merchant-form').reset();
+        }
+
+        document.getElementById('m-escalation').addEventListener('change', function() {
+            document.getElementById('escalation-note-group').style.display = this.value === 'yes' ? 'block' : 'none';
+        });
+
+        document.getElementById('merchant-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('merchant-id').value || document.getElementById('m-id').value;
+            const exists = merchants.findIndex(m => m.id === id);
+            const newMerchant = {
+                id: id,
+                name: document.getElementById('m-name').value,
+                closure: document.getElementById('m-closure').value,
+                stage: document.getElementById('m-stage').value,
+                approval: document.getElementById('m-approval').value,
+                goLive: document.getElementById('m-golive').value,
+                escalation: document.getElementById('m-escalation').value,
+                note: document.getElementById('m-escalation-note').value
+            };
+            if (exists >= 0) {
+                merchants[exists] = newMerchant;
+            } else {
+                merchants.push(newMerchant);
+            }
+            saveData();
+            updateStats();
+            renderTable();
+            renderChart();
+            closeModal();
+            showToast('Merchant saved!');
+        });
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // Init
+        loadData();
+        updateStats();
+        renderTable();
+        renderChart();
+    </script>
+</body>
+</html>
